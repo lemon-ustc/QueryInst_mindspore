@@ -1,4 +1,3 @@
-# QueryInst_mindspore
-QueryInst 
+# QueryInst_mindspore 
 
 QueryInst based on MindSpore
