@@ -1,5 +1,8 @@
 from typing import List, Tuple, Optional
 
+import numpy as np
+from src.resnet import ResidualBlock
+
 import mindspore.nn as nn
 from mindspore import Tensor
 
@@ -90,9 +93,6 @@ class QueryInst(nn.Cell):
         return results
 
 
-if __name__ == '__main__':
-    import numpy as np
-    from src.resnet import ResidualBlock
 
     match_costs_config = [
         dict(type='FocalLossCost', weight=2.0),
@@ -108,7 +108,7 @@ if __name__ == '__main__':
     bbox_head_config = dict(in_channel=256, inner_channel=64, out_channel=256)
     mask_head_config = dict(num_convs=4)
 
-    net = QueryInst(backbone=dict(block=ResidualBlock,
+    queryinst = QueryInst(backbone=dict(block=ResidualBlock,
                                   layer_nums=[3, 4, 6, 3],
                                   in_channels=[64, 256, 512, 1024],
                                   out_channels=[256, 512, 1024, 2048],
@@ -125,10 +125,3 @@ if __name__ == '__main__':
                                   bbox_head=bbox_head_config,
                                   mask_head=mask_head_config)
                     )
-    inputs = Tensor(np.load("./data/inputs.npy")).unsqueeze(0)
-    batch_gt_instances = {"bboxes": Tensor(np.load("./data/bboxes.npy")),
-                          "labels": Tensor([1, 5, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5, 26, 0, 0])}
-    batch_img_metas = {"img_shape": [768, 1344]}
-    batch_data_samples = [{"gt_instances": batch_gt_instances, "metainfo": batch_img_metas}]
-    res = net(inputs, batch_data_samples)
-    print(res[0][-1][1]['mask_preds'].shape)
