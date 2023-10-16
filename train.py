@@ -10,7 +10,7 @@ from src.resnet import ResNet
 from src.network_define import LossCallBack, WithLossCell, TrainOneStepCell, LossNet
 from dataset import data_to_mindrecord_byte_image, create_queryinst_dataset
 from src.lr_schedule import dynamic_lr
-from query_inst import QueryInst
+from query_inst import queryinst
 
 import mindspore.common.dtype as mstype
 from mindspore import context, Tensor, Parameter
@@ -109,7 +109,7 @@ def train():
     print("total images num: ", dataset_size)
     print("Create dataset done!")
 
-    net = QueryInst(config=config)
+    net = queryinst()
     net = net.set_train()
 
     loss = LossNet()
