@@ -4,16 +4,17 @@ import time
 import os
 
 from src.config import config
-from src.model_utils.moxing_adapter import moxing_wrapper
+# from src.model_utils.moxing_adapter import moxing_wrapper
 from src.model_utils.device_adapter import get_device_id, get_device_num
 from src.resnet import ResNet
 from src.network_define import LossCallBack, WithLossCell, TrainOneStepCell, LossNet
 from dataset import data_to_mindrecord_byte_image, create_queryinst_dataset
 from src.lr_schedule import dynamic_lr
 from query_inst import queryinst
+from qi import QueryInst
 
 import mindspore.common.dtype as mstype
-from mindspore import context, Tensor, Parameter
+from mindspore import context, Tensor, Parameter, nn
 from mindspore.communication.management import init, get_rank, get_group_size
 from mindspore.train.callback import CheckpointConfig, ModelCheckpoint, TimeMonitor
 from mindspore.train import Model
@@ -41,7 +42,7 @@ class WithLossCell(nn.Cell):
 def modelarts_pre_process():
     config.save_checkpoint_path = config.output_path
 
-@moxing_wrapper(pre_process=modelarts_pre_process)
+# @moxing_wrapper(pre_process=modelarts_pre_process)
 def train():
     device_target = config.device_target
     context.set_context(mode=context.GRAPH_MODE, device_target=device_target, device_id=get_device_id())
@@ -67,7 +68,7 @@ def train():
     # and the file name is FasterRcnn.mindrecord0, 1, ... file_num.
     prefix = "Queryinst.mindrecord"
     mindrecord_dir = config.mindrecord_dir
-    mindrecord_file = os.path.join(mindrecord_dir, prefix + "0")
+    mindrecord_file = os.path.join(mindrecord_dir, prefix)
     print("CHECKING MINDRECORD FILES ...")
 
     if rank == 0 and not os.path.exists(mindrecord_file + ".db"):
@@ -100,16 +101,15 @@ def train():
     print("CHECKING MINDRECORD FILES DONE!")
 
     # When create MindDataset, using the fitst mindrecord file, such as FasterRcnn.mindrecord0.
-    dataset = create_queryinst_dataset(config, mindrecord_file, batch_size=config.batch_size,
-                                        device_num=device_num, rank_id=rank,
-                                        num_parallel_workers=config.num_parallel_workers,
-                                        python_multiprocessing=config.python_multiprocessing)
+    dataset = create_queryinst_dataset(mindrecord_file, batch_size=config.batch_size,
+                                        device_num=device_num, rank_id=rank)
 
     dataset_size = dataset.get_dataset_size()
     print("total images num: ", dataset_size)
     print("Create dataset done!")
 
-    net = queryinst()
+    # net = queryinst()
+    net = QueryInst()
     net = net.set_train()
 
     loss = LossNet()
