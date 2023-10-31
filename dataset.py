@@ -24,7 +24,7 @@ import mindspore.dataset as de
 import mindspore.dataset.vision as C
 from mindspore.mindrecord import FileWriter
 
-from .model_utils.config import config
+from src.config import config
 
 if config.device_target == "Ascend":
     np_cast_type = np.float16
@@ -495,12 +495,13 @@ def create_coco_label(is_training):
 
     return image_files, image_anno_dict, masks, masks_shape
 
-def data_to_mindrecord_byte_image(dataset="coco", is_training=True, prefix="queryinst.mindrecord", file_num=8):
+def data_to_mindrecord_byte_image(config=config, dataset="coco", is_training=True, prefix="queryinst.mindrecord", file_num=8):
     """Create MindRecord file."""
     mindrecord_dir = config.mindrecord_dir
     mindrecord_path = os.path.join(mindrecord_dir, prefix)
 
-    writer = FileWriter(mindrecord_path, file_num)
+    # writer = FileWriter(mindrecord_path, file_num)
+    writer = FileWriter(mindrecord_path)
     if dataset == "coco":
         image_files, image_anno_dict, masks, masks_shape = create_coco_label(is_training)
     else:
@@ -523,13 +524,13 @@ def data_to_mindrecord_byte_image(dataset="coco", is_training=True, prefix="quer
         mask = masks[image_name]
         mask_shape = masks_shape[image_name]
         row = {"image": img, "annotation": annos, "mask": mask, "mask_shape": mask_shape}
-        if (ind + 1) % 10 == 0:
+        if (ind + 10) % 1 == 0:
             print("writing {}/{} into mindrecord".format(ind + 1, image_files_num))
         writer.write_raw_data([row])
     writer.commit()
 
 def create_queryinst_dataset(mindrecord_file, batch_size=2, device_num=1, rank_id=0,
-                            is_training=True, num_parallel_workers=8):
+                            is_training=True, num_parallel_workers=1):
     """Create queryinst dataset with MindDataset."""
     cv2.setNumThreads(0)
     de.config.set_prefetch_size(8)
@@ -546,10 +547,12 @@ def create_queryinst_dataset(mindrecord_file, batch_size=2, device_num=1, rank_i
         ds = ds.map(operations=compose_map_func,
                     input_columns=["image", "annotation", "mask", "mask_shape"],
                     output_columns=["image", "image_shape", "box", "label", "valid_num", "mask"],
-                    column_order=["image", "image_shape", "box", "label", "valid_num", "mask"],
+                    # column_order=["image", "image_shape", "box", "label", "valid_num", "mask"],
                     python_multiprocessing=False,
                     num_parallel_workers=num_parallel_workers)
-        ds = ds.batch(batch_size, drop_remainder=True, pad_info={"mask": ([config.max_instance_count, None, None], 0)})
+        ds = ds.project(["image", "image_shape", "box", "label", "valid_num", "mask"])
+        # ds = ds.batch(batch_size, drop_remainder=True, pad_info={"mask": ([config.max_instance_count, None, None], 0)})
+        ds = ds.batch(batch_size, drop_remainder=True)
 
     else:
         ds = ds.map(operations=compose_map_func,
