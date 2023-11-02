@@ -1,18 +1,3 @@
-# Copyright 2020-2022 Huawei Technologies Co., Ltd
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ============================================================================
-
 """queryinst dataset"""
 from __future__ import division
 
@@ -309,7 +294,7 @@ def transpose_column(img, img_shape, gt_bboxes, gt_label, gt_num, gt_mask):
     gt_bboxes = gt_bboxes.astype(np_cast_type)
     gt_label = gt_label.astype(np.int32)
     gt_num = gt_num.astype(np.bool)
-    gt_mask_data = gt_mask.astype(np.bool)
+    gt_mask_data = gt_mask.astype(np.float32)  #
 
     return (img_data, img_shape, gt_bboxes, gt_label, gt_num, gt_mask_data)
 
