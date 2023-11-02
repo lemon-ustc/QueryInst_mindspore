@@ -12,9 +12,9 @@ device_target: Ascend
 enable_profiling: False
 
 pre_trained: "/cache/data"
-coco_root: "/cache/data"
+coco_root: "./COCO"
 ckpt_path: './'
-ann_file: "./annotations/instances_val2017.json"
+ann_file: "./COCO/annotations/instances_train2017.json"
 # ==============================================================================
 modelarts_dataset_unzip_name: 'cocodataset'
 need_modelarts_dataset_unzip: True
@@ -23,6 +23,8 @@ img_path: ''
 result_path: ''
 
 # Training options
+num_parallel_workers: 1
+python_multiprocessing: 
 img_width: 1280
 img_height: 768
 keep_ratio: True
@@ -41,7 +43,7 @@ warmup_ratio: 0.333333
 sgd_momentum: 0.9
 
 # train
-batch_size: 2
+batch_size: 1
 loss_scale: 1
 momentum: 0.91
 weight_decay: 0.0001 # 1e-4
@@ -99,7 +101,6 @@ lr: 0.01
 
 # Model Description
 model_name: queryinst
-
 
 ---
 # Config description for each option
