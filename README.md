@@ -18,6 +18,15 @@ We present QueryInst, a new perspective for instance segmentation. QueryInst is 
 | :-------: | :-------: | :-----: | :-----: | :-----------------: | :---------: | :--------: | :----: | :-----: | :---------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
 | QueryInst | R-50-FPN  | pytorch |   1x    |         100         |    False    |   False    |  42.0  |  37.5   |                [config](./queryinst_r50_fpn_1x_coco.py)                 |                                                                         [model](https://download.openmmlab.com/mmdetection/v2.0/queryinst/queryinst_r50_fpn_1x_coco/queryinst_r50_fpn_1x_coco_20210907_084916-5a8f1998.pth) \| [log](https://download.openmmlab.com/mmdetection/v2.0/queryinst/queryinst_r50_fpn_1x_coco/queryinst_r50_fpn_1x_coco_20210907_084916.log.json) |
 
+## Dependency
+mindspore_gpu==2.2.0
+
+## Train
+Please run
+```shell
+python train.py
+```
+
 ## Citation
 
 ```latex
