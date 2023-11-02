@@ -4,25 +4,17 @@ import time
 import os
 
 from src.config import config
-# from src.model_utils.moxing_adapter import moxing_wrapper
 from src.model_utils.device_adapter import get_device_id, get_device_num
-from src.resnet import ResNet
-from src.network_define import LossCallBack, WithLossCell, TrainOneStepCell, LossNet
+
 from dataset import data_to_mindrecord_byte_image, create_queryinst_dataset
 from src.lr_schedule import dynamic_lr
-from query_inst import queryinst
-from qi import QueryInst
+from queryinst import QueryInst
+
 
 import mindspore.common.dtype as mstype
-from mindspore import context, Tensor, Parameter, nn
-from mindspore.communication.management import init, get_rank, get_group_size
-from mindspore.train.callback import CheckpointConfig, ModelCheckpoint, TimeMonitor
-from mindspore.train import Model
+from mindspore import Tensor, nn, context
 from mindspore.context import ParallelMode
-from mindspore.train.serialization import load_checkpoint, load_param_into_net
-from mindspore.nn import Momentum
-from mindspore.common import set_seed
-
+from mindspore.communication.management import init, get_rank, get_group_size
 
 class WithLossCell(nn.Cell):
     def __init__(self, net, criterion):
@@ -30,28 +22,28 @@ class WithLossCell(nn.Cell):
         self.net = net
         self.criterion = criterion
 
-    def construct(self, img, label):
-        pred = self.net(img)
-        loss = self.criterion(pred, label)
-        # print("label ", label.dtype)
-        # print("#########################################")
-        # print(pred)
-        # print(label)
+    def construct(self, data):
+        img = data[0]
+        bboxes = data[2]
+        labels = data[3]
+        seg = data[5]
+        batch_gt_instances = {"bboxes": bboxes.squeeze(0),
+                                "labels": labels.squeeze(0)}
+        batch_img_metas = {"img_shape": [768, 1280]}
+        batch_data_samples = [{"gt_instances": batch_gt_instances, "metainfo": batch_img_metas}]
+        pre = self.net(img, batch_data_samples)
+        pred = pre[-1][1]['mask_preds'].squeeze()
+        loss = self.criterion(pred, seg[0, 0, :, :])
         return loss
 
-def modelarts_pre_process():
-    config.save_checkpoint_path = config.output_path
-
-# @moxing_wrapper(pre_process=modelarts_pre_process)
 def train():
     device_target = config.device_target
     context.set_context(mode=context.GRAPH_MODE, device_target=device_target, device_id=get_device_id())
     
-    dataset_sink_mode_flag = True
     if not config.do_eval and config.run_distribute:
         init()
         rank = get_rank()
-        dataset_sink_mode_flag = device_target == 'Ascend'
+        device_target == 'Ascend'
         device_num = get_group_size()
         context.set_auto_parallel_context(device_num=device_num, parallel_mode=ParallelMode.DATA_PARALLEL,
                                           gradients_mean=True)
@@ -107,37 +99,27 @@ def train():
     dataset_size = dataset.get_dataset_size()
     print("total images num: ", dataset_size)
     print("Create dataset done!")
+    
 
-    # net = queryinst()
     net = QueryInst()
-    net = net.set_train()
 
-    loss = LossNet()
     lr = Tensor(dynamic_lr(config, rank_size=device_num, start_steps=config.pretrain_epoch_size * dataset_size),
                 mstype.float32)
-    opt = Momentum(params=net.trainable_params(), learning_rate=lr, momentum=config.momentum,
+    opt = nn.Momentum(params=net.trainable_params(), learning_rate=lr, momentum=config.momentum,
                     weight_decay=config.weight_decay, loss_scale=config.loss_scale)
 
-    net_with_loss = WithLossCell(net, loss)
-    if config.run_distribute:
-        net = TrainOneStepCell(net_with_loss, opt, sens=config.loss_scale, reduce_flag=True,
-                                mean=True, degree=device_num)
-    else:
-        net = TrainOneStepCell(net_with_loss, opt, sens=config.loss_scale)
-
-    time_cb = TimeMonitor(data_size=dataset_size)
-    loss_cb = LossCallBack(rank_id=rank)
-    cb = [time_cb, loss_cb]
-    if config.save_checkpoint:
-        ckptconfig = CheckpointConfig(save_checkpoint_steps=config.save_checkpoint_epochs * dataset_size,
-                                        keep_checkpoint_max=config.keep_checkpoint_max)
-        save_checkpoint_path = os.path.join(config.save_checkpoint_path, 'ckpt_' + str(rank) + '/')
-        ckpoint_cb = ModelCheckpoint(prefix='mask_rcnn', directory=save_checkpoint_path, config=ckptconfig)
-        cb += [ckpoint_cb]
-
-    model = Model(net)
-    model.train(config.epoch_size, dataset, callbacks=cb, dataset_sink_mode=dataset_sink_mode_flag)
-
-
+    model = QueryInst()
+    
+    net_with_loss = WithLossCell(model, nn.DiceLoss())
+    
+    net = nn.TrainOneStepCell(net_with_loss, opt)
+    
+    iteration = 0
+    for epoch in range(config.total_epoch):    
+        for index, data in enumerate(dataset): 
+            loss = net(data)
+            iteration += 1
+            print("iteration ", iteration, "loss ", loss)
+      
 if __name__ == '__main__':
     train()
