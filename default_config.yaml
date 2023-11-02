@@ -14,7 +14,7 @@ enable_profiling: False
 pre_trained: "/cache/data"
 coco_root: "./COCO"
 ckpt_path: './'
-ann_file: "./COCO/annotations/instances_train2017.json"
+ann_file: "./COCO/annotations/instances_train2017s.json"
 # ==============================================================================
 modelarts_dataset_unzip_name: 'cocodataset'
 need_modelarts_dataset_unzip: True
